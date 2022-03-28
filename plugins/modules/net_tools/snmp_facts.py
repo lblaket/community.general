@@ -26,13 +26,13 @@ options:
         required: true
     version:
         description:
-            - SNMP Version to use, C(v2), C(v2c) or C(v3).
+            - SNMP Version to use, C(v1), C(v2), C(v2c) or C(v3).
         type: str
         required: true
         choices: [ v2, v2c, v3 ]
     community:
         description:
-            - The SNMP community string, required if I(version) is C(v2) or C(v2c).
+            - The SNMP community string, required if I(version) is C(v1), C(v2), or C(v2c).
         type: str
     level:
         description:
@@ -273,7 +273,7 @@ def main():
     module = AnsibleModule(
         argument_spec=dict(
             host=dict(type='str', required=True),
-            version=dict(type='str', required=True, choices=['v2', 'v2c', 'v3']),
+            version=dict(type='str', required=True, choices=['v1', 'v2', 'v2c', 'v3']),
             community=dict(type='str'),
             username=dict(type='str'),
             level=dict(type='str', choices=['authNoPriv', 'authPriv']),
@@ -299,8 +299,8 @@ def main():
     cmdGen = cmdgen.CommandGenerator()
     transport_opts = dict((k, m_args[k]) for k in ('timeout', 'retries') if m_args[k] is not None)
 
-    # Verify that we receive a community when using snmp v2
-    if m_args['version'] in ("v2", "v2c"):
+    # Verify that we receive a community when using snmp v1 or v2
+    if m_args['version'] in ("v1", "v2", "v2c"):
         if m_args['community'] is None:
             module.fail_json(msg='Community not set when using snmp version 2')
 
@@ -322,7 +322,11 @@ def main():
             privacy_proto = cmdgen.usmDESPrivProtocol
 
     # Use SNMP Version 2
-    if m_args['version'] in ("v2", "v2c"):
+    if m_args['version'] == "v1":
+        snmp_auth = cmdgen.CommunityData(m_args['community'], mpModel=0)
+
+    # Use SNMP Version 2
+    elif m_args['version'] in ("v2", "v2c"):
         snmp_auth = cmdgen.CommunityData(m_args['community'])
 
     # Use SNMP Version 3 with authNoPriv
